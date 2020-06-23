@@ -1,4 +1,4 @@
-class StringListWrapper inherits IO {	-- aka nod de Product sau Rank
+class StringListWrapper inherits IO {	-- aka nod de Product sau Rank Wrapper
 	currentStringList : StringList;
 	nextStringList : StringListWrapper;
 
@@ -18,10 +18,32 @@ class StringListWrapper inherits IO {	-- aka nod de Product sau Rank
 		}
 	};
 
+	getCurrentStringList() : StringList {
+		currentStringList
+	};
+
 	printProducts(index : Int) : Object {
 		{
 			currentStringList.printStringList(index);
-			nextStringList.printProducts(index);
+
+			-- tratarea cazului de terminare in structura case: puteam apela recursiv direct, fara aceste conditii de mai jos, dar asta ar fi insemnat ca se mai cicleaza o data, pe un element de tip EmptyStringListWrapper (apeland metoda print din clasa NilStringList).
+			-- nu ar fi o eroare, dar in functia curenta eu printez si separatorul (acea virgula), iar daca mai apelez o data metoda pe un obiect gol, se va afisa o virgula in plus la finalul sirului, ceea ce nu corespunde cu outcome-ul corect.
+			-- exact asa tratez si terminarea recursivitatii in functia de print din StringListWrapper (aka StringNode)
+			case nextStringList of
+				dummy : EmptyStringListWrapper => out_string(" (BAD TERMINATOR) ");
+				dummy : StringListWrapper => {
+					case nextStringList.getCurrentStringList() of
+						dummy : NilStringList => true;
+						dummy : StringList => {
+							out_string(", ");
+							nextStringList.printProducts(index);
+						};
+					esac;
+				};
+			esac;
+
+			-- de aceea nu mai fac aici apelul recursiv
+			-- nextStringList.printProducts(index);
 		}
 	};
 };
@@ -54,20 +76,23 @@ class Row inherits IO {
         front <- front.appendProduct(stringList)
     };
 
-    toString() : Object {
+    toString(isLastRow : Bool) : Object {
 		{
-			out_string("\n").out_int(index).out_string(": [");
+			out_string("\n").out_int(index).out_string(": [ ");
         	rear.printProducts(index);
-			out_string("]\n");
+			out_string(" ]\n");
 		}
     };
 };
 
 class EmptyRow inherits Row {
-	toString() : Object {
-		true
+	toString(isLastRow : Bool) : Object {
+		{
+			true;
+		}
 	};
 };
+
 
 class RowWrapper inherits IO {
 	currentRow : Row;
@@ -81,6 +106,10 @@ class RowWrapper inherits IO {
 		}
 	};
 
+	getRow() : Row {
+		currentRow
+	};
+
 	appendRow(row : Row) : RowWrapper {
 		{
 			currentRow <- row;
@@ -90,10 +119,18 @@ class RowWrapper inherits IO {
 	};
 
 	printRows() : Object {
-		{
-			currentRow.toString();
-			nextRow.printRows();
-		}
+		(let isLastRow : Bool <- false in 
+			{
+				case nextRow of
+					dummy : EmptyRowWrapper => isLastRow <- true;
+					dummy : RowWrapper => isLastRow <- false;
+					(*dummy : EmptyRowWrapper => {isLastRow <- true; out_string("\nYOU SEE EMPTY ROW?\n");};
+					dummy : RowWrapper => {isLastRow <- false; out_string("\nYOU SEE ROW?\n");};*)
+				esac;
+				currentRow.toString(isLastRow);
+				nextRow.printRows();
+			}
+		)
 	};
 };
 
